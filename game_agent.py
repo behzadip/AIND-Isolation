@@ -123,20 +123,24 @@ class CustomPlayer:
         # Perform any required initializations, including selecting an initial
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
+        
+        if not legal_moves:
+            return (-1,-1)
 
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            pass
-
+            if self.method == 'minimax':
+                return self.minimax(game, self.search_depth, maximizing_player=True)[1]
+        
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            pass
+            print('Timeout')
 
         # Return the best move from the last completed search iteration
-        raise NotImplementedError
+        #raise NotImplementedError
 
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
@@ -173,7 +177,42 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        raise NotImplementedError
+        
+        depth_tracker = depth
+        
+        
+        def Max_Value(game, depth_tracker):
+            depth_tracker -=1
+            if depth_tracker == 0:
+                return self.score(game, game.__player_1__)
+            v = float('-inf')
+            #depth_tracker -=1
+            for move_max in game.get_legal_moves():
+                v = max(v, Min_Value(game.forecast_move(move_max), depth_tracker))
+                #depth_tracker -=1
+            return v
+        
+        def Min_Value(game, depth_tracker):
+            depth_tracker -=1
+            if depth_tracker == 0:
+                #print('Player 1 location', game.get_player_location(game.__player_1__))
+                #print('Player 2 location', game.get_player_location(game.__player_2__))
+                return self.score(game, game.__player_1__)
+            v = float('inf')
+            #depth_tracker -=1
+            for move_min in game.get_legal_moves():
+                v = min(v, Max_Value(game.forecast_move(move_min), depth_tracker))
+                #depth_tracker -=1
+            return v    
+        
+        if depth_tracker > 0 and maximizing_player:
+            return max([(Min_Value(game.forecast_move(move), depth_tracker), move) for move in game.get_legal_moves()], key = lambda x: x[0])
+        
+        #scores = [self.score(game, game.active_player)]
+        #return max(scores), 2
+        #print(output)
+        #return output
+        #raise NotImplementedError
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
@@ -217,4 +256,33 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        raise NotImplementedError
+        
+        depth_tracker = depth
+        
+        
+        def Max_Value(game, depth_tracker):
+            depth_tracker -=1
+            if depth_tracker == 0:
+                return self.score(game, game.__player_1__)
+            v = float('-inf')
+            #depth_tracker -=1
+            for move_max in game.get_legal_moves():
+                v = max(v, Min_Value(game.forecast_move(move_max), depth_tracker))
+                #depth_tracker -=1
+            return v
+        
+        def Min_Value(game, depth_tracker):
+            depth_tracker -=1
+            if depth_tracker == 0:
+                #print('Player 1 location', game.get_player_location(game.__player_1__))
+                #print('Player 2 location', game.get_player_location(game.__player_2__))
+                return self.score(game, game.__player_1__)
+            v = float('inf')
+            #depth_tracker -=1
+            for move_min in game.get_legal_moves():
+                v = min(v, Max_Value(game.forecast_move(move_min), depth_tracker))
+                #depth_tracker -=1
+            return v    
+        
+        if depth_tracker > 0 and maximizing_player:
+            return max([(Min_Value(game.forecast_move(move), depth_tracker), move) for move in game.get_legal_moves()], key = lambda x: x[0])
