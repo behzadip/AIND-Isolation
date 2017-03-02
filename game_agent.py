@@ -38,7 +38,16 @@ def custom_score(game, player):
     """
 
     # TODO: finish this function!
-    raise NotImplementedError
+    
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - opp_moves)
 
 
 class CustomPlayer:
@@ -132,8 +141,27 @@ class CustomPlayer:
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            if self.method == 'minimax':
+            if self.method == 'minimax' and not self.iterative:
                 return self.minimax(game, self.search_depth, maximizing_player=True)[1]
+            
+            elif self.method == 'alphabeta' and not self.iterative:
+                return self.alphabeta(game, self.search_depth, maximizing_player=True)[1]
+            
+            elif self.method == 'minimax' and self.iterative:
+                depth = 0
+                best_move = None
+                while self.time_left() > self.TIMER_THRESHOLD:
+                    depth += 1
+                    best_move = self.minimax(game, depth, maximizing_player=True)[1]
+                return best_move
+            
+            elif self.method == 'alphabeta' and self.iterative:
+                depth = 0
+                best_move = None
+                while self.time_left() > self.TIMER_THRESHOLD:
+                    depth += 1
+                    best_move = self.alphabeta(game, depth, maximizing_player=True)[1]
+                return best_move
         
         except Timeout:
             # Handle any actions required at timeout, if necessary
@@ -179,7 +207,6 @@ class CustomPlayer:
         # TODO: finish this function!
         
         depth_tracker = depth
-        
         
         def Max_Value(game, depth_tracker):
             depth_tracker -=1
