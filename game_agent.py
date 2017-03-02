@@ -186,33 +186,23 @@ class CustomPlayer:
             if depth_tracker == 0:
                 return self.score(game, game.__player_1__)
             v = float('-inf')
-            #depth_tracker -=1
             for move_max in game.get_legal_moves():
                 v = max(v, Min_Value(game.forecast_move(move_max), depth_tracker))
-                #depth_tracker -=1
             return v
         
         def Min_Value(game, depth_tracker):
             depth_tracker -=1
             if depth_tracker == 0:
-                #print('Player 1 location', game.get_player_location(game.__player_1__))
-                #print('Player 2 location', game.get_player_location(game.__player_2__))
                 return self.score(game, game.__player_1__)
             v = float('inf')
-            #depth_tracker -=1
             for move_min in game.get_legal_moves():
                 v = min(v, Max_Value(game.forecast_move(move_min), depth_tracker))
-                #depth_tracker -=1
             return v    
         
         if depth_tracker > 0 and maximizing_player:
             return max([(Min_Value(game.forecast_move(move), depth_tracker), move) for move in game.get_legal_moves()], key = lambda x: x[0])
         
-        #scores = [self.score(game, game.active_player)]
-        #return max(scores), 2
-        #print(output)
-        #return output
-        #raise NotImplementedError
+
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
@@ -259,30 +249,43 @@ class CustomPlayer:
         
         depth_tracker = depth
         
-        
-        def Max_Value(game, depth_tracker):
+        def Max_Value(game, alpha, beta, depth_tracker):
+            
+            if self.time_left() < self.TIMER_THRESHOLD:
+                raise Timeout()
+            
             depth_tracker -=1
             if depth_tracker == 0:
                 return self.score(game, game.__player_1__)
             v = float('-inf')
-            #depth_tracker -=1
             for move_max in game.get_legal_moves():
-                v = max(v, Min_Value(game.forecast_move(move_max), depth_tracker))
-                #depth_tracker -=1
+                v = max(v, Min_Value(game.forecast_move(move_max), alpha, beta, depth_tracker))
+                if v >= beta:
+                    return v
+                alpha = max(alpha,v)
             return v
         
-        def Min_Value(game, depth_tracker):
+        def Min_Value(game, alpha, beta, depth_tracker):
+            
+            if self.time_left() < self.TIMER_THRESHOLD:
+                raise Timeout()
+            
             depth_tracker -=1
             if depth_tracker == 0:
-                #print('Player 1 location', game.get_player_location(game.__player_1__))
-                #print('Player 2 location', game.get_player_location(game.__player_2__))
                 return self.score(game, game.__player_1__)
             v = float('inf')
-            #depth_tracker -=1
             for move_min in game.get_legal_moves():
-                v = min(v, Max_Value(game.forecast_move(move_min), depth_tracker))
-                #depth_tracker -=1
-            return v    
+                v = min(v, Max_Value(game.forecast_move(move_min), alpha, beta, depth_tracker))
+                if v <= alpha:
+                    return v
+                beta = min(beta, v)
+            return v
         
-        if depth_tracker > 0 and maximizing_player:
-            return max([(Min_Value(game.forecast_move(move), depth_tracker), move) for move in game.get_legal_moves()], key = lambda x: x[0])
+        best_action = None
+        for move in game.get_legal_moves(game.active_player):
+            v = Min_Value(game.forecast_move(move), alpha, beta, depth_tracker)
+            if v > alpha:
+                alpha = v
+                best_action = move
+        return alpha, best_action    
+    
