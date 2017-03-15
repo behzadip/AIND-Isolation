@@ -13,6 +13,11 @@ class Timeout(Exception):
     """Subclass base exception for code clarity."""
     pass
 
+def GetOpenSpaces(game):
+    summ = 0
+    for row in game.__board_state__:
+        summ += row.count(0)
+    return summ
 
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -39,16 +44,33 @@ def custom_score(game, player):
 
     # TODO: finish this function!
     
-    if game.is_loser(player):
-        return float("-inf")
-
-    if game.is_winner(player):
+    own_moves = game.get_legal_moves(player)
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    
+    if not opp_moves and game.inactive_player == player:
         return float("inf")
+    
+    elif not own_moves and game.active_player == player:
+        return float("-inf")
+    
+    elif GetOpenSpaces(game) > 43:
+        return float(len(own_moves) - 4 * len(opp_moves))
+    
+    else:
+        temps = []
+        score = 0
+        for move in game.get_legal_moves():
+            game2 = game.forecast_move(move)
+            temp = len(game2.get_legal_moves())
+            if game2.active_player == player:
+                temps.append(temp)
+            else:
+                temps.append(-temp)
+        if temps:
+            score = sum(temps) / float(len(temps))
 
-    own_moves = len(game.get_legal_moves(player))
-    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - 2 * opp_moves)
-
+        return float(len(own_moves) - 0.2 * len(opp_moves) + .5 * score)
+    
 
 class CustomPlayer:
     """Game-playing agent that chooses a move using your evaluation function
@@ -124,7 +146,7 @@ class CustomPlayer:
             Board coordinates corresponding to a legal move; may return
             (-1, -1) if there are no available legal moves.
         """
-
+        
         self.time_left = time_left
 
         # TODO: finish this function!
@@ -132,18 +154,19 @@ class CustomPlayer:
         # Perform any required initializations, including selecting an initial
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
-        best_move = None
+        
         if not legal_moves:
             return (-1,-1)
-
+        best_move = None
+        
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
+            depth = 0
             if self.method == 'minimax' and not self.iterative:
                 if game.active_player == game.__player_1__:
-                #if game.__player_symbols__[game.__active_player__] == 1:
                     return self.minimax(game, self.search_depth, maximizing_player=True)[1]
                 else:
                     return self.minimax(game, self.search_depth, maximizing_player=False)[1]
@@ -155,9 +178,8 @@ class CustomPlayer:
                     return self.alphabeta(game, self.search_depth, maximizing_player=False)[1]
             
             elif self.method == 'minimax' and self.iterative:
-                depth = 0
                 best_move = legal_moves[0]
-                while self.time_left() > self.TIMER_THRESHOLD:
+                while True:
                     depth += 1
                     if game.active_player == game.__player_1__:
                         best_move = self.minimax(game, depth, maximizing_player=True)[1]
@@ -166,15 +188,19 @@ class CustomPlayer:
                 return best_move
             
             elif self.method == 'alphabeta' and self.iterative:
-                depth = 0
                 best_move = legal_moves[0]
-                while self.time_left() > self.TIMER_THRESHOLD:
+                while True:
                     depth += 1
                     if game.active_player == game.__player_1__:
-                        best_move = self.alphabeta(game, depth, maximizing_player=True)[1]
+                        out = self.alphabeta(game, depth, maximizing_player=True)
+                        best_move = out[1]
+                        if abs(out[0]) >= 200:
+                            return best_move
                     else:
-                        best_move = self.alphabeta(game, depth, maximizing_player=False)[1]
-
+                        out = self.alphabeta(game, depth, maximizing_player=False)
+                        best_move = out[1]
+                        if abs(out[0]) >= 200:
+                            return best_move
                 return best_move
         
         except Timeout:
@@ -225,68 +251,37 @@ class CustomPlayer:
         def Max_Value(game, depth_tracker):
             
             if self.time_left() < self.TIMER_THRESHOLD:
-                #return float('inf')
                 raise Timeout()
 
             depth_tracker -=1
-            if depth_tracker == 0:
+            if depth_tracker == 0 or not game.get_legal_moves():
                 return self.score(game, game.__player_1__)
-                #return self.score(game, player)
             v = float('-inf')
             for move_max in game.get_legal_moves():
-                #if self.time_left() < self.TIMER_THRESHOLD:
-                #    break
                 v = max(v, Min_Value(game.forecast_move(move_max), depth_tracker))
             return v
         
         def Min_Value(game, depth_tracker):
             
             if self.time_left() < self.TIMER_THRESHOLD:
-                #return float('-inf')
                 raise Timeout()
 
             depth_tracker -=1
-            if depth_tracker == 0:
+            if depth_tracker == 0 or not game.get_legal_moves():
                 return self.score(game, game.__player_1__)
             
             v = float('inf')
             for move_min in game.get_legal_moves():
-                #if self.time_left() < self.TIMER_THRESHOLD:
-                #    break
                 v = min(v, Max_Value(game.forecast_move(move_min), depth_tracker))
             return v    
         
         if maximizing_player:
-            return max([(Min_Value(game.forecast_move(move), depth_tracker), move) for move in game.get_legal_moves()], key = lambda x: x[0])
-            '''
-            best_action = game.get_legal_moves()[0]
-            check=float("-inf")
-            for move in game.get_legal_moves():
-                if self.time_left() < self.TIMER_THRESHOLD:
-                    break
-                v = Min_Value(game.forecast_move(move), depth_tracker)
-                if v > check:
-                    check = v
-                    best_action = move
-            return check, best_action
-            '''    
+            return max([(Min_Value(game.forecast_move(move), depth_tracker), move) for move in game.get_legal_moves()], key = lambda x: x[0])  
         
         else:
             return min([(Max_Value(game.forecast_move(move), depth_tracker), move) for move in game.get_legal_moves()], key = lambda x: x[0])
-            '''
-            best_action = game.get_legal_moves()[0]
-            check=float("inf")
-            for move in game.get_legal_moves():
-                if self.time_left() < self.TIMER_THRESHOLD:
-                    break
-                v = Max_Value(game.forecast_move(move), depth_tracker)
-                if v < check:
-                    check = v
-                    best_action = move
-            return check, best_action
-            '''
 
-
+            
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
         lectures.
@@ -335,13 +330,11 @@ class CustomPlayer:
         def Max_Value(game, alpha, beta, depth_tracker):
             
             if self.time_left() < self.TIMER_THRESHOLD:
-                #return float('inf')
                 raise Timeout()
             
             depth_tracker -=1
-            if depth_tracker == 0:
+            if depth_tracker == 0 or not game.get_legal_moves():
                 return self.score(game, game.__player_1__)
-                #return self.score(game, player)
             v = float('-inf')
             for move_max in game.get_legal_moves():
                 if self.time_left() < self.TIMER_THRESHOLD:
@@ -355,17 +348,13 @@ class CustomPlayer:
         def Min_Value(game, alpha, beta, depth_tracker):
             
             if self.time_left() < self.TIMER_THRESHOLD:
-                #return float('-inf')
                 raise Timeout()
             
             depth_tracker -=1
-            if depth_tracker == 0:
+            if depth_tracker == 0 or not game.get_legal_moves():
                 return self.score(game, game.__player_1__)
-                #return self.score(game, player)
             v = float('inf')
             for move_min in game.get_legal_moves():
-                #if self.time_left() < self.TIMER_THRESHOLD:
-                    #break
                 v = min(v, Max_Value(game.forecast_move(move_min), alpha, beta, depth_tracker))
                 if v <= alpha:
                     return v
@@ -375,8 +364,6 @@ class CustomPlayer:
         if maximizing_player:
             best_action = game.get_legal_moves()[0]
             for move in game.get_legal_moves():
-                #if self.time_left() < self.TIMER_THRESHOLD:
-                    #break
                 v = Min_Value(game.forecast_move(move), alpha, beta, depth_tracker)
                 if v > alpha:
                     alpha = v
@@ -385,8 +372,6 @@ class CustomPlayer:
         else:
             best_action = game.get_legal_moves()[0]
             for move in game.get_legal_moves():
-                #if self.time_left() < self.TIMER_THRESHOLD:
-                    #break
                 v = Max_Value(game.forecast_move(move), alpha, beta, depth_tracker)
                 if v < beta:
                     beta = v
