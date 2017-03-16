@@ -53,9 +53,13 @@ def custom_score(game, player):
     elif not own_moves and game.active_player == player:
         return float("-inf")
     
+    
+    # for the first 3 moves in the game the agent goes after opponent aggresively to minimize its movements
+    # coeefficient 4 is obtained through grid search in range of [1,5]
     elif GetOpenSpaces(game) > 43:
         return float(len(own_moves) - 4 * len(opp_moves))
     
+    # score metric is evaluated by going deep one level and calculates average number of moves available at the next level
     else:
         temps = []
         score = 0
@@ -70,7 +74,7 @@ def custom_score(game, player):
             score = sum(temps) / float(len(temps))
 
         return float(len(own_moves) - 0.2 * len(opp_moves) + .5 * score)
-    
+
 
 class CustomPlayer:
     """Game-playing agent that chooses a move using your evaluation function
@@ -158,7 +162,7 @@ class CustomPlayer:
         if not legal_moves:
             return (-1,-1)
         best_move = None
-        
+
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
@@ -194,14 +198,18 @@ class CustomPlayer:
                     if game.active_player == game.__player_1__:
                         out = self.alphabeta(game, depth, maximizing_player=True)
                         best_move = out[1]
+                        # return as soon as a win or lose node is selected as best move
+                        # 200 is a big enough number that this if statement only catches win or lose nodes and not normal evaluated scores
                         if abs(out[0]) >= 200:
                             return best_move
                     else:
                         out = self.alphabeta(game, depth, maximizing_player=False)
                         best_move = out[1]
+                        # return as soon as a win or lose node is selected as best move
+                        # 200 is a big enough number that this if statement only catches win or lose nodes and not normal evaluated scores
                         if abs(out[0]) >= 200:
                             return best_move
-                return best_move
+                #return best_move
         
         except Timeout:
             # Handle any actions required at timeout, if necessary
